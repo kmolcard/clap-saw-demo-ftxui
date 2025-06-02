@@ -1,0 +1,15 @@
+[submodule "libs/clap"]
+	path = libs/clap
+	url = https://github.com/free-audio/clap.git
+[submodule "libs/clap-helpers"]
+	path = libs/clap-helpers
+	url = https://github.com/free-audio/clap-helpers.git
+[submodule "libs/readerwriterqueue"]
+	path = libs/readerwriterqueue
+	url = https://github.com/cameron314/readerwriterqueue.git
+[submodule "libs/ftxui"]
+	path = libs/ftxui
+	url = https://github.com/ArthurSonzogni/FTXUI.git
+[submodule "libs/clap-ftxui-support"]
+	path = libs/clap-ftxui-support
+	url = https://github.com/kmolcard/clap-ftxui-support.git
