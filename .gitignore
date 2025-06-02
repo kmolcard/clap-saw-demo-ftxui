@@ -1,0 +1,95 @@
+# Prerequisites
+*.d
+
+# Compiled Object files
+*.slo
+*.lo
+*.o
+*.obj
+
+# Precompiled Headers
+*.gch
+*.pch
+
+# Compiled Dynamic libraries
+*.so
+*.dylib
+*.dll
+
+# Fortran module files
+*.mod
+*.smod
+
+# Compiled Static libraries
+*.lai
+*.la
+*.a
+*.lib
+
+# Executables
+*.exe
+*.out
+*.app
+
+# Visual Studio
+obj/
+*.sln
+*.vcxproj
+*.vcxproj.filters
+*.vcxproj.user
+.vs/
+packages/
+target/
+*.pdb
+packages.config
+CMakeSettings.json
+.vscode
+.cache
+
+
+# IntelliJ IDEA
+.idea
+
+# CMake common patterns
+build/
+cmake-build-*/
+
+
+# A place to store stuff and get it git ignored
+ignore/*
+
+# Build directories
+build/
+build-*/
+
+# CMake generated files
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+Makefile
+CPackConfig.cmake
+CPackSourceConfig.cmake
+compile_commands.json
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Test binaries
+test_plugin
+test_gui
+test_parameters
+
+# Plugin binaries (keep source, not binaries)
+*.clap
+
+# Debug symbols
+*.dSYM/
