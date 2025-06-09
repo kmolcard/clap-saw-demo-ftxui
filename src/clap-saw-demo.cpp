@@ -48,7 +48,7 @@ ClapSawDemo::~ClapSawDemo()
 
 const char *features[] = {CLAP_PLUGIN_FEATURE_INSTRUMENT, CLAP_PLUGIN_FEATURE_SYNTHESIZER, nullptr};
 clap_plugin_descriptor ClapSawDemo::desc = {CLAP_VERSION,
-                                            "org.surge-synth-team.clap-saw-demo",
+                                            "org.surge-synth-team.clap-saw-demo-ftxui",
                                             "Clap Saw Demo Synth (FTXUI Version)",
                                             "Surge Synth Team, U-He",
                                             "https://surge-synth-team.org",
