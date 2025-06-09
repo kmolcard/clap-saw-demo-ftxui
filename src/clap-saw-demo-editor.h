@@ -38,6 +38,9 @@ struct ClapSawDemoEditor : public ftxui_clap_editor
     ftxui::Component createRadioButtonForParam(clap_id pid,
                                                std::vector<std::pair<int, std::string>> options);
 
+    // Component initialization
+    void createParameterComponents();
+
     // UI element creators
     ftxui::Element renderHeader();
     ftxui::Element renderOscillatorSection();
@@ -66,6 +69,7 @@ struct ClapSawDemoEditor : public ftxui_clap_editor
 
     // UI state
     int selected_tab_ = 0;
+    std::vector<std::string> tab_entries_;
     std::string status_message_ = "Ready";
 };
 

@@ -358,19 +358,71 @@ void ClapSawDemoEditor::dequeueParamUpdates()
 
 ftxui::Component ClapSawDemoEditor::onCreateComponent()
 {
-    // Start with a very simple UI to test basic functionality
-    // Create a simple text display
-    auto simple_component = ftxui::Renderer(
-        [this]
-        {
-            return ftxui::vbox(
-                {ftxui::text("CLAP SAW DEMO - FTXUI") | ftxui::bold | ftxui::center,
-                 ftxui::separator(), ftxui::text("Plugin is running!") | ftxui::center,
-                 ftxui::text("Polyphony: " + std::to_string(synthData.polyphony)) | ftxui::center,
-                 ftxui::separator(), ftxui::text("Simple test UI - No crashes!") | ftxui::center});
-        });
+    // Update UI parameters first
+    dequeueParamUpdates();
 
-    return simple_component | ftxui::border;
+    // Create all parameter components once
+    createParameterComponents();
+
+    // Create main container with tab navigation
+    tab_entries_ = {"Oscillator", "Filter", "Amplifier"};
+    auto tabs = ftxui::Menu(&tab_entries_, &selected_tab_);
+
+    // Create section containers that hold actual components
+    auto oscillator_container =
+        ftxui::Container::Vertical({param_components_[ClapSawDemo::pmUnisonCount],
+                                    param_components_[ClapSawDemo::pmUnisonSpread],
+                                    param_components_[ClapSawDemo::pmOscDetune]});
+
+    auto filter_container = ftxui::Container::Vertical(
+        {param_components_[ClapSawDemo::pmPreFilterVCA], param_components_[ClapSawDemo::pmCutoff],
+         param_components_[ClapSawDemo::pmResonance],
+         param_components_[ClapSawDemo::pmFilterMode]});
+
+    auto amplifier_container = ftxui::Container::Vertical(
+        {param_components_[ClapSawDemo::pmAmpAttack], param_components_[ClapSawDemo::pmAmpRelease],
+         param_components_[ClapSawDemo::pmAmpIsGate]});
+
+    // Create main content area that shows the right section
+    auto content = ftxui::Container::Tab(
+        {oscillator_container, filter_container, amplifier_container}, &selected_tab_);
+
+    // Wrap with renderer to add section styling
+    auto styled_content = ftxui::Renderer(content,
+                                          [this]
+                                          {
+                                              dequeueParamUpdates(); // Keep UI in sync
+
+                                              switch (selected_tab_)
+                                              {
+                                              case 0:
+                                                  return renderOscillatorSection();
+                                              case 1:
+                                                  return renderFilterSection();
+                                              case 2:
+                                                  return renderAmplifierSection();
+                                              default:
+                                                  return renderOscillatorSection();
+                                              }
+                                          });
+
+    // Main container with header and footer
+    auto main_container = ftxui::Container::Vertical(
+        {ftxui::Renderer(
+             [] { return ftxui::text("CLAP Saw Demo - FTXUI") | ftxui::bold | ftxui::center; }),
+         ftxui::Renderer([] { return ftxui::separator(); }), tabs,
+         ftxui::Renderer([] { return ftxui::separator(); }), styled_content,
+         ftxui::Renderer(
+             [this]
+             {
+                 return ftxui::hbox(
+                            {ftxui::text("Polyphony: " + std::to_string(synthData.polyphony)) |
+                                 ftxui::flex,
+                             ftxui::text("Status: " + status_message_)}) |
+                        ftxui::size(ftxui::HEIGHT, ftxui::EQUAL, 1);
+             })});
+
+    return main_container | ftxui::border;
 }
 
 void ClapSawDemoEditor::onGuiCreate()
@@ -385,5 +437,166 @@ void ClapSawDemoEditor::onGuiDestroy()
 }
 
 void ClapSawDemoEditor::onParameterUpdate() { dequeueParamUpdates(); }
+
+void ClapSawDemoEditor::createParameterComponents()
+{
+    // Clear existing components
+    param_components_.clear();
+
+    // Create oscillator components
+    param_components_[ClapSawDemo::pmUnisonCount] =
+        createSliderForParam(ClapSawDemo::pmUnisonCount, "Unison Count", 1, 7);
+    param_components_[ClapSawDemo::pmUnisonSpread] =
+        createSliderForParam(ClapSawDemo::pmUnisonSpread, "Spread (cents)", 0, 100);
+    param_components_[ClapSawDemo::pmOscDetune] =
+        createSliderForParam(ClapSawDemo::pmOscDetune, "Detune (cents)", -200, 200);
+
+    // Create filter components
+    param_components_[ClapSawDemo::pmPreFilterVCA] =
+        createSliderForParam(ClapSawDemo::pmPreFilterVCA, "Pre-Filter VCA", 0.0f, 1.0f);
+    param_components_[ClapSawDemo::pmCutoff] =
+        createSliderForParam(ClapSawDemo::pmCutoff, "Cutoff (keys)", 1, 127);
+    param_components_[ClapSawDemo::pmResonance] =
+        createSliderForParam(ClapSawDemo::pmResonance, "Resonance", 0.0f, 1.0f);
+
+    // Filter mode options
+    std::vector<std::pair<int, std::string>> filter_modes = {
+        {0, "LP (Low Pass)"}, {1, "HP (High Pass)"}, {2, "BP (Band Pass)"},
+        {3, "NOTCH"},         {4, "PEAK"},           {5, "ALL"}};
+    param_components_[ClapSawDemo::pmFilterMode] =
+        createRadioButtonForParam(ClapSawDemo::pmFilterMode, filter_modes);
+
+    // Create amplifier components
+    param_components_[ClapSawDemo::pmAmpAttack] =
+        createSliderForParam(ClapSawDemo::pmAmpAttack, "Attack (s)", 0.0f, 1.0f);
+    param_components_[ClapSawDemo::pmAmpRelease] =
+        createSliderForParam(ClapSawDemo::pmAmpRelease, "Release (s)", 0.0f, 1.0f);
+    param_components_[ClapSawDemo::pmAmpIsGate] =
+        createSwitchForParam(ClapSawDemo::pmAmpIsGate, "Deactivate Envelope", false);
+}
+
+// Section renderer implementations
+ftxui::Element ClapSawDemoEditor::renderOscillatorSection()
+{
+    // Create layout with parameter value displays
+    return ftxui::vbox({
+               ftxui::text("OSCILLATOR") | ftxui::bold | ftxui::center, ftxui::separator(),
+               ftxui::hbox(
+                   {ftxui::vbox(
+                        {ftxui::text("Unison Count: " +
+                                     std::to_string((int)paramCopy[ClapSawDemo::pmUnisonCount])),
+                         ftxui::text("Current: " +
+                                     std::to_string((int)paramCopy[ClapSawDemo::pmUnisonCount]))}) |
+                        ftxui::flex,
+                    ftxui::separator(),
+                    ftxui::vbox(
+                        {ftxui::text("Spread: " +
+                                     std::to_string((int)paramCopy[ClapSawDemo::pmUnisonSpread]) +
+                                     " cents"),
+                         ftxui::text(
+                             "Current: " +
+                             std::to_string((int)paramCopy[ClapSawDemo::pmUnisonSpread]))}) |
+                        ftxui::flex}),
+               ftxui::separator(),
+               ftxui::hbox(
+                   {ftxui::vbox(
+                        {ftxui::text(
+                             "Detune: " + std::to_string((int)paramCopy[ClapSawDemo::pmOscDetune]) +
+                             " cents"),
+                         ftxui::text("Current: " +
+                                     std::to_string((int)paramCopy[ClapSawDemo::pmOscDetune]))}) |
+                    ftxui::flex}),
+               ftxui::text("") // spacing
+           }) |
+           ftxui::border | ftxui::size(ftxui::HEIGHT, ftxui::GREATER_THAN, 12);
+}
+
+ftxui::Element ClapSawDemoEditor::renderFilterSection()
+{
+    // Create layout with parameter value displays
+    return ftxui::vbox({
+               ftxui::text("FILTER") | ftxui::bold | ftxui::center, ftxui::separator(),
+               ftxui::hbox(
+                   {ftxui::vbox(
+                        {ftxui::text(
+                             "Pre-Filter VCA: " +
+                             std::to_string((int)(paramCopy[ClapSawDemo::pmPreFilterVCA] * 100)) +
+                             "%"),
+                         ftxui::text(
+                             "Current: " +
+                             std::to_string((int)(paramCopy[ClapSawDemo::pmPreFilterVCA] * 100)) +
+                             "%")}) |
+                        ftxui::flex,
+                    ftxui::separator(),
+                    ftxui::vbox(
+                        {ftxui::text(
+                             "Cutoff: " + std::to_string((int)paramCopy[ClapSawDemo::pmCutoff]) +
+                             " keys"),
+                         ftxui::text("Current: " +
+                                     std::to_string((int)paramCopy[ClapSawDemo::pmCutoff]))}) |
+                        ftxui::flex}),
+               ftxui::separator(),
+               ftxui::hbox(
+                   {ftxui::vbox({ftxui::text("Resonance: " +
+                                             std::to_string(
+                                                 (int)(paramCopy[ClapSawDemo::pmResonance] * 100)) +
+                                             "%"),
+                                 ftxui::text("Current: " +
+                                             std::to_string(
+                                                 (int)(paramCopy[ClapSawDemo::pmResonance] * 100)) +
+                                             "%")}) |
+                        ftxui::flex,
+                    ftxui::separator(),
+                    ftxui::vbox(
+                        {ftxui::text("Filter Type:"),
+                         ftxui::text("Mode: " +
+                                     std::to_string((int)paramCopy[ClapSawDemo::pmFilterMode]))}) |
+                        ftxui::flex}),
+               ftxui::text("") // spacing
+           }) |
+           ftxui::border | ftxui::size(ftxui::HEIGHT, ftxui::GREATER_THAN, 12);
+}
+
+ftxui::Element ClapSawDemoEditor::renderAmplifierSection()
+{
+    // Create layout with parameter value displays
+    return ftxui::vbox({
+               ftxui::text("AMPLIFIER") | ftxui::bold | ftxui::center, ftxui::separator(),
+               ftxui::hbox(
+                   {ftxui::vbox({ftxui::text("Attack: " +
+                                             std::to_string((
+                                                 int)(paramCopy[ClapSawDemo::pmAmpAttack] * 1000)) +
+                                             " ms"),
+                                 ftxui::text("Current: " +
+                                             std::to_string((
+                                                 int)(paramCopy[ClapSawDemo::pmAmpAttack] * 1000)) +
+                                             " ms")}) |
+                        ftxui::flex,
+                    ftxui::separator(),
+                    ftxui::vbox(
+                        {ftxui::text(
+                             "Release: " +
+                             std::to_string((int)(paramCopy[ClapSawDemo::pmAmpRelease] * 1000)) +
+                             " ms"),
+                         ftxui::text(
+                             "Current: " +
+                             std::to_string((int)(paramCopy[ClapSawDemo::pmAmpRelease] * 1000)) +
+                             " ms")}) |
+                        ftxui::flex}),
+               ftxui::separator(),
+               ftxui::hbox(
+                   {ftxui::vbox({ftxui::text("Gate Mode: " +
+                                             std::string(paramCopy[ClapSawDemo::pmAmpIsGate] > 0.5f
+                                                             ? "ON"
+                                                             : "OFF")),
+                                 ftxui::text("Envelope: " +
+                                             std::string(paramCopy[ClapSawDemo::pmAmpIsGate] > 0.5f
+                                                             ? "Disabled"
+                                                             : "Enabled"))}) |
+                    ftxui::flex}),
+               ftxui::text("") // spacing
+           }) |
+           ftxui::border | ftxui::size(ftxui::HEIGHT, ftxui::GREATER_THAN, 12);
+}
 
 } // namespace sst::clap_saw_demo
