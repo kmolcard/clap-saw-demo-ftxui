@@ -152,6 +152,29 @@ bool ClapSawDemo::guiGetSize(uint32_t *width, uint32_t *height) noexcept
 
 bool ClapSawDemo::guiAdjustSize(uint32_t *width, uint32_t *height) noexcept { return true; }
 
+/*
+ * guiShow shows the GUI window and makes it visible to the user.
+ * This is called by the host when it wants to display the plugin GUI.
+ */
+bool ClapSawDemo::guiShow() noexcept
+{
+    assert(editor);
+    printf("ClapSawDemo::guiShow() called\n");
+    bool result = ftxui_clap_guiShowWith(editor);
+    printf("ftxui_clap_guiShowWith returned: %s\n", result ? "true" : "false");
+    return result;
+}
+
+/*
+ * guiHide hides the GUI window but doesn't destroy it.
+ * This is called by the host when it wants to hide the plugin GUI.
+ */
+bool ClapSawDemo::guiHide() noexcept
+{
+    assert(editor);
+    return ftxui_clap_guiHideWith(editor);
+}
+
 ClapSawDemoEditor::ClapSawDemoEditor(ClapSawDemo::SynthToUI_Queue_t &i,
                                      ClapSawDemo::UIToSynth_Queue_t &o,
                                      const ClapSawDemo::DataCopyForUI &d, std::function<void()> pf)
@@ -335,59 +358,19 @@ void ClapSawDemoEditor::dequeueParamUpdates()
 
 ftxui::Component ClapSawDemoEditor::onCreateComponent()
 {
-    // Create the main UI layout using FTXUI components
-    auto oscillator_section = ftxui::Container::Vertical({
-        ftxui::Renderer([] { return ftxui::text("Oscillator") | ftxui::bold | ftxui::center; }),
-        createSliderForParam(ClapSawDemo::pmUnisonCount, "Unison Count", 1, SawDemoVoice::max_uni),
-        createSliderForParam(ClapSawDemo::pmUnisonSpread, "Unison Spread", 0, 100),
-        createSliderForParam(ClapSawDemo::pmOscDetune, "Osc Detune", -200, 200),
-    });
+    // Start with a very simple UI to test basic functionality
+    // Create a simple text display
+    auto simple_component = ftxui::Renderer(
+        [this]
+        {
+            return ftxui::vbox(
+                {ftxui::text("CLAP SAW DEMO - FTXUI") | ftxui::bold | ftxui::center,
+                 ftxui::separator(), ftxui::text("Plugin is running!") | ftxui::center,
+                 ftxui::text("Polyphony: " + std::to_string(synthData.polyphony)) | ftxui::center,
+                 ftxui::separator(), ftxui::text("Simple test UI - No crashes!") | ftxui::center});
+        });
 
-    auto amplifier_section = ftxui::Container::Vertical({
-        ftxui::Renderer([] { return ftxui::text("Amplifier") | ftxui::bold | ftxui::center; }),
-        createSliderForParam(ClapSawDemo::pmPreFilterVCA, "VCA", 0, 1),
-        createSwitchForParam(ClapSawDemo::pmAmpIsGate, "Amp Envelope", true),
-        createSliderForParam(ClapSawDemo::pmAmpAttack, "Attack", 0, 1),
-        createSliderForParam(ClapSawDemo::pmAmpRelease, "Release", 0, 1),
-    });
-
-    auto filter_section = ftxui::Container::Vertical({
-        ftxui::Renderer([] { return ftxui::text("Filter") | ftxui::bold | ftxui::center; }),
-        createRadioButtonForParam(ClapSawDemo::pmFilterMode,
-                                  {{SawDemoVoice::StereoSimperSVF::Mode::LP, "LP"},
-                                   {SawDemoVoice::StereoSimperSVF::Mode::BP, "BP"},
-                                   {SawDemoVoice::StereoSimperSVF::Mode::HP, "HP"},
-                                   {SawDemoVoice::StereoSimperSVF::Mode::NOTCH, "Notch"},
-                                   {SawDemoVoice::StereoSimperSVF::Mode::PEAK, "Peak"},
-                                   {SawDemoVoice::StereoSimperSVF::Mode::ALL, "All"}}),
-        createSliderForParam(ClapSawDemo::pmCutoff, "Cutoff", 1, 127),
-        createSliderForParam(ClapSawDemo::pmResonance, "Resonance", 0, 1),
-    });
-
-    // Create main container with all sections
-    main_container_ = ftxui::Container::Vertical(
-        {ftxui::Renderer(
-             [this]
-             {
-                 return ftxui::vbox(
-                     {ftxui::text("CLAP SAW DEMO FTXUI") | ftxui::bold | ftxui::center,
-                      ftxui::separator(),
-                      ftxui::text("Polyphony: " + std::to_string(synthData.polyphony)) |
-                          ftxui::center,
-                      ftxui::separator()});
-             }),
-         oscillator_section, ftxui::Renderer([] { return ftxui::separator(); }), amplifier_section,
-         ftxui::Renderer([] { return ftxui::separator(); }), filter_section,
-         ftxui::Renderer(
-             []
-             {
-                 std::string footer = "CLAP v" + std::to_string(CLAP_VERSION_MAJOR) + "." +
-                                      std::to_string(CLAP_VERSION_MINOR) + "." +
-                                      std::to_string(CLAP_VERSION_REVISION) + " - FTXUI";
-                 return ftxui::text(footer) | ftxui::center;
-             })});
-
-    return main_container_ | ftxui::border;
+    return simple_component | ftxui::border;
 }
 
 void ClapSawDemoEditor::onGuiCreate()

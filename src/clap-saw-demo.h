@@ -262,6 +262,8 @@ struct ClapSawDemo : public clap::helpers::Plugin<clap::helpers::MisbehaviourHan
     bool guiAdjustSize(uint32_t *width, uint32_t *height) noexcept override;
     bool guiSetSize(uint32_t width, uint32_t height) noexcept override;
     bool guiGetSize(uint32_t *width, uint32_t *height) noexcept override;
+    bool guiShow() noexcept override;
+    bool guiHide() noexcept override;
 
     // Setting this atomic to true will force a push of all current engine
     // params to ui using the queue mechanism
